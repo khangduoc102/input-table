@@ -8,23 +8,24 @@ let projects = [
 
 const defaultValues = {
   date: new Date().toISOString().substring(0, 10),
-  project: '',
+  project: projects[0],
   hours: null,
   definition:''
 }
 
+const defaultData = [{
+  date: new Date().toISOString().substring(0, 10),
+  project: '',
+  hours: null,
+  definition:''
+}]
 let insertValue = 0;
 let data = [];
 
 class App extends Component {
   state={
     rawData: undefined,
-    data: [{
-      date: new Date().toISOString().substring(0, 10),
-      project: projects[0],
-      hours: null,
-      definition:''
-    }],
+    data: defaultData,
     insertValue: 1,
     warningModal: false,
     mainModal: false,
@@ -54,7 +55,7 @@ class App extends Component {
   }
 
   componentDidUpdate = (prevState, prevProps) => {
-    if(prevState.amount !== this.state.amount){
+    if(prevState.data !== this.state.data){
       /*
       insertValue=this.state.insertValue
       for(let i=0; i< insertValue; i++){
@@ -126,14 +127,19 @@ class App extends Component {
   }
 
   saveData = () => {
-    sessionStorage.setItem('tempData', JSON.stringify(this.state.data))
+    sessionStorage.setItem('resData', JSON.stringify(this.state.data))
     console.log(this.state.data);
     this.toggleMainModal();
+    this.setState({data: defaultData})
   }
 
   cancelData = () => {
     this.toggle();
-    this.setState({modalMessage: "Are you sure you want to cancel? Not saved data will be lost", editing: false})
+    this.setState({modalMessage: "Are you sure you want to cancel? Saved process will be lost", editing: false})
+  }
+
+  clearData = () => {
+    this.setState({data: defaultData})
   }
 
   triggerModal = (e) => {
@@ -149,11 +155,11 @@ class App extends Component {
     return (
       <div className="App">
         <button type="button" className="btn btn-primary" onClick={this.toggleMainModal}>Open Modal</button>
-        <Modal isOpen={this.state.mainModal} toggle={this.toggleMainModal} className="main-modal modal-lg">
-          <ModalHeader toggle={this.toggleMainModal}>Modal title</ModalHeader>
+        <Modal isOpen={this.state.mainModal} toggle={this.toggleMainModal} className="modal-lg main-modal ">
+          <ModalHeader toggle={this.toggleMainModal} charCode="" >Modal title</ModalHeader>
           <ModalBody>
-          <div className="container">
-                  <form>
+          <div className="container ">
+                  <form className="d-flex justify-content-center">
                     <table>
                       <tbody>
                         <tr><th>Date</th><th>Project</th><th>Hours</th><th>Definition</th><th></th></tr>
@@ -170,22 +176,22 @@ class App extends Component {
                               </td>
                               <td><input value={this.state.data[key].hours} type="number" min="1" max="24" required onChange={e => this.setHours(e, key)}/></td>
                               <td><input value={this.state.data[key].definition} type="text" onChange={e => this.setDefinition(e, key)}/></td>
-                              <td>{ key===0 ? '' : <button className="btn" onClick={(e) => this.deleteRow(e, key)}>Delete</button>}</td>
+                              <td>{ key===0 ? '' : <button className="btn btn-danger" onClick={(e) => this.deleteRow(e, key)}>Delete</button>}</td>
                             </tr>
                           ))
                         }
                       </tbody>
                     </table>
-                    <div class="container d-flex justify-content-center p-2">
-                      <button className="btn mr-2" onClick={this.addRows} >Add</button>
-                      <input type="number" min="1" max="10" className="text-center" value={this.state.insertValue} onChange={(e) => {this.setState({insertValue: parseInt(e.target.value, 10)})}} />
-                    </div>
                   </form>
+                  <div class="container d-flex justify-content-center p-2">
+                      <button className="btn btn-info mr-2" onClick={this.addRows} >Add</button>
+                      <input type="number" min="1" max="10" className="text-center" value={this.state.insertValue} onChange={(e) => {this.setState({insertValue: parseInt(e.target.value, 10)})}} />
+                  </div>
                 </div>
-                <Warning modal={this.state.warningModal} toggle={this.toggle} message={this.state.modalMessage} proceed={this.state.editing ? () => {} : this.toggleMainModal} ok={this.state.modalYesButtonText} decline={this.state.modalNoButtonText}/>
+                <Warning modal={this.state.warningModal} toggle={this.toggle} message={this.state.modalMessage} proceed={this.state.editing ? () => {} : () => {this.toggleMainModal(); this.clearData()}} ok={this.state.modalYesButtonText} decline={this.state.modalNoButtonText}/>
           </ModalBody>
           <ModalFooter>
-            <button type="button" className="btn btn-secondary" onClick={this.cancelData} >Close</button>
+            <button type="button" className="btn btn-secondary" onClick={this.cancelData} >Cancel</button>
               <button type="button" className="btn btn-primary" onClick={this.saveData}>Save changes</button>
           </ModalFooter>
         </Modal>

@@ -32,21 +32,38 @@
 }
 
 @media (min-width: 576px){
-  .main-modal {
+  
+}
+.main-modal {
     min-width:960px;
     margin: 1.75rem auto;
-  }
+    min-height:560px;
+}
+
+.modal .close{
+  display: none;
 }
 
 input, select {
   height: 2.5rem;
-  border: 1px solid grey;
+  border: 1px solid #ddd;
+  border-radius: 0.25rem;
+}
+
+form{
+  width: 100%;
 }
 
 td, th {
-  padding: 0.5rem
+  width: auto;
+  min-width: 5rem;
+  padding: 0.75rem 0.5rem
 }
 
 .App form{
   width: fit-content;
+}
+
+tr:hover {
+  background-color: #ddd;
 }

@@ -14,8 +14,9 @@ export default class Warning extends Component {
                     <p>{this.props.message}</p>
                 </ModalBody>
                 <ModalFooter>
-                    <button className="btn btn-primary" onClick={this.proceed}>{this.props.ok}</button>{' '}
                     <button className="btn btn-secondary" onClick={this.props.toggle}>{this.props.decline}</button>
+                    <button className="btn btn-primary" onClick={this.proceed}>{this.props.ok}</button>{' '}
+                    
                 </ModalFooter>
             </Modal>
         )
