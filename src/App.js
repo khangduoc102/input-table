@@ -33,6 +33,7 @@ class App extends Component {
     modalYesButtonText: 'Yes',
     modalNoButtonText: 'No',
     editing: false,
+    error: undefined,
   }
 
   toggle = () => {
@@ -128,14 +129,32 @@ class App extends Component {
 
   saveData = () => {
     sessionStorage.setItem('resData', JSON.stringify(this.state.data))
+    var xmlhttp;
+    let query='';
+    let res= [];
+		this.state.data.map((element) => {   
+      query = `project=${element.project}&hours=${element.hours}&date=${element.date}&definition=${element.definition}`;
+      xmlhttp=new XMLHttpRequest(); 
+      xmlhttp.onreadystatechange=function(){
+        if(xmlhttp.status === 200){
+          res.push('OK');
+        }
+      }
+      xmlhttp.open("GET","/php/logTime.php?" + query,true);
+      xmlhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xmlhttp.send();
+    })
+    
     console.log(this.state.data);
     this.toggleMainModal();
-    this.setState({data: defaultData})
+    this.setState({data: defaultData, error: undefined})
+    window.location.reload();
+    
   }
 
   cancelData = () => {
     this.toggle();
-    this.setState({modalMessage: "Are you sure you want to cancel? Saved process will be lost", editing: false})
+    this.setState({modalMessage: "Are you sure you want to cancel? Saved process will be lost", editing: false, error: undefined})
   }
 
   clearData = () => {
@@ -186,6 +205,9 @@ class App extends Component {
                   <div class="container d-flex justify-content-center p-2">
                       <button className="btn btn-info mr-2" onClick={this.addRows} >Add</button>
                       <input type="number" min="1" max="10" className="text-center" value={this.state.insertValue} onChange={(e) => {this.setState({insertValue: parseInt(e.target.value, 10)})}} />
+                  </div>
+                  <div>
+                    {this.state.error ? <p className="text-center text-danger font-weight-bold">{this.state.error}</p> : ''}
                   </div>
                 </div>
                 <Warning modal={this.state.warningModal} toggle={this.toggle} message={this.state.modalMessage} proceed={this.state.editing ? () => {} : () => {this.toggleMainModal(); this.clearData()}} ok={this.state.modalYesButtonText} decline={this.state.modalNoButtonText}/>
