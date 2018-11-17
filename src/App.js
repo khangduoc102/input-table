@@ -6,17 +6,19 @@ import './App.css';
 let projects = [
 ]
 
-const defaultValues = {
-  date: new Date().toISOString().substring(0, 10),
-  project: projects[0],
-  hours: null,
-  definition:''
+const defaultValues = class {
+  constructor(date, project, hours, definition) {
+    this.date=date;
+    this.project=project;
+    this.hours=hours;
+    this.definition= definition;
+  }
 }
 
-const defaultData = [{
+var defaultData = [{
   date: new Date().toISOString().substring(0, 10),
   project: '',
-  hours: null,
+  hours: "1",
   definition:''
 }]
 let insertValue = 0;
@@ -34,6 +36,7 @@ class App extends Component {
     modalNoButtonText: 'No',
     editing: false,
     error: undefined,
+    newValue:{},
   }
 
   toggle = () => {
@@ -53,10 +56,16 @@ class App extends Component {
     JSON.parse(sessionStorage.getItem('data')).map((prj) => {
       projects.push(prj.Project_ID)
     })
+    this.setState({data: [{
+      date: new Date().toISOString().substring(0, 10),
+      project: projects[0],
+      hours: null,
+      definition:''
+    }]})
   }
 
-  componentDidUpdate = (prevState, prevProps) => {
-    if(prevState.data !== this.state.data){
+  componentDidUpdate = (prevProps, prevState) => {
+    if(prevState.data.length !== this.state.data.length){
       /*
       insertValue=this.state.insertValue
       for(let i=0; i< insertValue; i++){
@@ -67,15 +76,11 @@ class App extends Component {
     }
   }
 
+
   addRows= (e) => {
     e.preventDefault(); 
     for(let i=0; i< this.state.insertValue; i++){
-      this.setState(prevState => ({data: [...prevState.data, {
-        date: new Date().toISOString().substring(0, 10),
-        project: projects[0],
-        hours: null,
-        definition:''
-      }]}))
+      this.setState(prevState => ({data: [...prevState.data, new defaultValues(this.state.data[this.state.data.length-1].date, this.state.data[this.state.data.length-1].project, this.state.data[this.state.data.length-1].hours, this.state.data[this.state.data.length-1].definition)]}))
     }
   }
 
@@ -102,18 +107,22 @@ class App extends Component {
   }
 
   setHours= (e, key) => {
-    if(e.target.value > 8){
-      this.toggle();
-      this.setState({modalMessage: "Are you sure you want to insert more than 8 hours?", editing: true})
-    }
-    let newData = this.state.data;
-    newData.map((obj, index)=>{
-      if(index === key){
-        obj.hours = e.target.value
+    let regex = /^[0-9.,]+$/
+    if(!e.target.value || e.target.value.match(regex)){
+      
+      if(parseFloat(e.target.value.replace(',','.').replace(' ','')) > 8){
+        this.toggle();
+        this.setState({modalMessage: "Are you sure you want to insert more than 8 hours?", editing: true})
       }
-      return ''
-    })
-    this.setState( {data: newData})
+      let newData = this.state.data;
+      newData.map((obj, index)=>{
+        if(index === key){
+          obj.hours = e.target.value
+        }
+        return ''
+      })
+      this.setState( {data: newData})
+    }
   }
 
   setDefinition= (e, key) => {
@@ -127,28 +136,51 @@ class App extends Component {
     this.setState( {data: newData})
   }
 
+
   saveData = () => {
     sessionStorage.setItem('resData', JSON.stringify(this.state.data))
     var xmlhttp;
     let query='';
-    let res= [];
-		this.state.data.map((element) => {   
-      query = `project=${element.project}&hours=${element.hours}&date=${element.date}&definition=${element.definition}`;
+    let resArr = [];
+		this.state.data.map((element, index) => {   
+      if(element.hours){
+        query = `project=${element.project}&hours=${element.hours.replace(',','.').replace(' ','')}&date=${element.date}&definition=${element.definition}`;
+      /*
       xmlhttp=new XMLHttpRequest(); 
       xmlhttp.onreadystatechange=function(){
         if(xmlhttp.status === 200){
           res.push('OK');
+          
         }
       }
       xmlhttp.open("GET","/php/logTime.php?" + query,true);
       xmlhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
       xmlhttp.send();
+      */
+     console.log(query)
+      fetch('php/logTime.php?'+query, {
+        method: "GET",
+        credentials: "same-origin", // include, *same-origin, omit
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }).then(res => {
+        resArr.push('ok');    
+        if(!this.state.data[index+1]){  
+          console.log(this.state.data);
+          this.setState({error: undefined})
+          window.setInterval(() =>{
+            this.setState({data: defaultData})
+            this.toggleMainModal();         
+            window.location.reload();
+          }, 1500)   
+        }       
+      }).catch(e => {
+        console.log(e);
+        this.setState({error: "There are some queries that have not been executed!"})
+      })
+      }
     })
-    
-    console.log(this.state.data);
-    this.toggleMainModal();
-    this.setState({data: defaultData, error: undefined})
-    window.location.reload();
     
   }
 
@@ -173,19 +205,19 @@ class App extends Component {
   render() {
     return (
       <div className="App">
-        <button type="button" className="btn btn-primary" onClick={this.toggleMainModal}>Open Modal</button>
+        <button type="button" className="btn btn-primary" onClick={this.toggleMainModal}>New</button>
         <Modal isOpen={this.state.mainModal} toggle={this.toggleMainModal} className="modal-lg main-modal ">
-          <ModalHeader toggle={this.toggleMainModal} charCode="" >Modal title</ModalHeader>
+          <ModalHeader toggle={this.toggleMainModal} charCode="" >Insert entries</ModalHeader>
           <ModalBody>
           <div className="container ">
                   <form className="d-flex justify-content-center">
-                    <table>
-                      <tbody>
-                        <tr><th>Date</th><th>Project</th><th>Hours</th><th>Definition</th><th></th></tr>
+                    <table  style={{width: '100%'}}>
+                      <tbody  style={{width: '100%'}}>
+                        <tr><th style={{width: '20%'}}>Date</th><th style={{width: '20%'}}>Project</th><th style={{width: '10%'}}>Hours</th><th style={{width: '40%'}}>Definition</th><th  style={{width: '10%'}}></th></tr>
                         {
                           this.state.data.map((obj, key) => (
                             <tr key={key}>
-                              <td><input type="date" value={this.state.data[key].date} onChange={(e) => this.setDate(e, key)}/></td>
+                              <td><input style={{width: '100%'}} type="date" value={this.state.data[key].date} onChange={(e) => this.setDate(e, key)}/></td>
                               <td>
                                 <select value={this.state.data[key].project} onChange={e => this.setProject(e, key)}>
                                   { projects.map((prj, index) => (
@@ -193,8 +225,8 @@ class App extends Component {
                                   ))}
                                 </select>
                               </td>
-                              <td><input value={this.state.data[key].hours} type="number" min="1" max="24" required onChange={e => this.setHours(e, key)}/></td>
-                              <td><input value={this.state.data[key].definition} type="text" onChange={e => this.setDefinition(e, key)}/></td>
+                              <td><input style={{width: '100%'}} value={this.state.data[key].hours} size="5" type="text" required onChange={e => this.setHours(e, key)}/></td>
+                              <td><input style={{width: '100%'}} value={this.state.data[key].definition} type="text" onChange={e => this.setDefinition(e, key)}/></td>
                               <td>{ key===0 ? '' : <button className="btn btn-danger" onClick={(e) => this.deleteRow(e, key)}>Delete</button>}</td>
                             </tr>
                           ))
