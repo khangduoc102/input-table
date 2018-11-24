@@ -27,7 +27,7 @@ let data = [];
 class App extends Component {
   state={
     rawData: undefined,
-    data: defaultData,
+    data: [],
     insertValue: 1,
     warningModal: false,
     mainModal: false,
@@ -37,6 +37,11 @@ class App extends Component {
     editing: false,
     error: undefined,
     newValue:{},
+    workHours: undefined,
+    hoursPerWeek: undefined,
+    nextDate: new Date().toISOString().substring(0, 10),
+    nextHour: undefined,
+    overLimitObjectIndex: undefined
   }
 
   toggle = () => {
@@ -52,16 +57,10 @@ class App extends Component {
   }
 
   componentDidMount = () => {
-    this.setState({ rawData: JSON.parse(sessionStorage.getItem('data'))})
+    this.setState(() => ({ rawData: JSON.parse(sessionStorage.getItem('data')), workHours: JSON.parse(sessionStorage.getItem('work_hours')), hoursPerWeek: sessionStorage.getItem('hours_per_week')}), () => {this.setNextHour(new Date().toISOString().substring(0, 10));})
     JSON.parse(sessionStorage.getItem('data')).map((prj) => {
       projects.push(prj.Project_ID)
     })
-    this.setState({data: [{
-      date: new Date().toISOString().substring(0, 10),
-      project: projects[0],
-      hours: null,
-      definition:''
-    }]})
   }
 
   componentDidUpdate = (prevProps, prevState) => {
@@ -73,14 +72,99 @@ class App extends Component {
       } 
       console.log(this.state)
       */
+     this.setNextHour(this.state.nextDate);
+    }
+    if(this.state.nextHour !== prevState.nextHour && this.state.data.length === 0){
+      this.setState(() => ({data: [new defaultValues(this.state.nextDate, this.state.workHours[this.state.workHours.length -1].Project, this.state.nextHour, "")]}), () => {this.setNextHour(this.state.nextDate)})
+    }
+    if(this.state.data !== prevState.data){
+      
     }
   }
 
+  setNextHour = (today) => {
+    let count= 0;
+    let todayDate = new Date(today);
+    let tomorrow = new Date(todayDate.setDate(todayDate.getDate() + 1)).toISOString().substring(0, 10);
+
+    let hoursPerDay= Number.parseFloat(Number.parseFloat(this.state.hoursPerWeek) / 5).toFixed(1);
+    console.log(hoursPerDay);
+    let i=0;
+    while (this.state.workHours[i]){
+      if(today === this.state.workHours[i].Date) {
+        count += Number.parseFloat(this.state.workHours[i].Hour)
+      }
+      if(count > hoursPerDay || count == hoursPerDay){
+        today = tomorrow;
+
+        todayDate = new Date(today);
+        tomorrow = new Date(todayDate.setDate(todayDate.getDate() + 1)).toISOString().substring(0, 10);
+        
+        i = -1;
+        count= 0;
+      }
+      i++
+    }
+    let k=0;
+    while (this.state.data[k]){
+      if(today === this.state.data[k].date) {
+        count += Number.parseFloat(this.state.data[k].hours.replace(',','.').replace(' ',''))
+      }
+      if(count > hoursPerDay || count == hoursPerDay){
+        today = tomorrow;
+
+        todayDate = new Date(today);
+        tomorrow = new Date(todayDate.setDate(todayDate.getDate() + 1)).toISOString().substring(0, 10);
+        
+        k = -1;
+        count= 0;
+      }
+      k++
+    }
+    console.log(today);
+    let result = hoursPerDay - count;
+    if(result > 5){
+      result = 5
+    }
+    this.setState({nextDate: today, nextHour: result.toFixed(1).toString()})
+  }
+
+  setNextInputHour = (today) => {
+    console.log('run');
+    let count= 0;
+    let todayDate = new Date(today);
+    let tomorrow = new Date(todayDate.setDate(todayDate.getDate() + 1)).toISOString().substring(0, 10);
+
+    let hoursPerDay= Number.parseFloat(Number.parseFloat(this.state.hoursPerWeek) / 5).toFixed(1);
+    console.log(hoursPerDay);
+    let i=0;
+    while (this.state.data[i]){
+      if(today === this.state.data[i].date) {
+        count += Number.parseFloat(this.state.data[i].hours)
+      }
+      if(count > hoursPerDay || count == hoursPerDay){
+        today = tomorrow;
+
+        todayDate = new Date(today);
+        tomorrow = new Date(todayDate.setDate(todayDate.getDate() + 1)).toISOString().substring(0, 10);
+        
+        i = -1;
+        count= 0;
+      }
+      i++
+    }
+    console.log(today);
+    let result = hoursPerDay - count;
+    if(result > 5){
+      result = 5
+    }
+    this.setState({nextDate: today, nextHour: result})
+  }
 
   addRows= (e) => {
     e.preventDefault(); 
     for(let i=0; i< this.state.insertValue; i++){
-      this.setState(prevState => ({data: [...prevState.data, new defaultValues(this.state.data[this.state.data.length-1].date, this.state.data[this.state.data.length-1].project, this.state.data[this.state.data.length-1].hours, this.state.data[this.state.data.length-1].definition)]}))
+      this.setState(prevState => ({data: [...prevState.data, new defaultValues(this.state.nextDate, this.state.data[this.state.data.length-1].project, this.state.nextHour, this.state.data[this.state.data.length-1].definition)]}))
     }
   }
 
@@ -92,7 +176,7 @@ class App extends Component {
       }
       return ''
     })
-    this.setState( {data: newData})
+    this.setState(() => ({data: newData}),  () => {this.setNextHour(this.state.data[key].date)})
   }
 
   setProject= (e, key) => {
@@ -103,16 +187,17 @@ class App extends Component {
       }
       return ''
     })
-    this.setState( {data: newData})
+    this.setState(() => ({data: newData}))
   }
 
   setHours= (e, key) => {
     let regex = /^[0-9.,]+$/
     if(!e.target.value || e.target.value.match(regex)){
       
-      if(parseFloat(e.target.value.replace(',','.').replace(' ','')) > 8){
+      if(parseFloat(e.target.value.replace(',','.').replace(' ','')) > (Number.parseFloat(this.state.hoursPerWeek) / 5)){
         this.toggle();
-        this.setState({modalMessage: "Are you sure you want to insert more than 8 hours?", editing: true})
+        this.setState({modalMessage: `Are you sure you want to insert more than ${Number.parseFloat(Number.parseFloat(this.state.hoursPerWeek) / 5).toFixed(1)} hours?`, editing: true})
+        this.setState({overLimitObjectIndex: key})
       }
       let newData = this.state.data;
       newData.map((obj, index)=>{
@@ -121,8 +206,19 @@ class App extends Component {
         }
         return ''
       })
-      this.setState( {data: newData})
+      this.setState( () =>  ({data: newData}), () => {this.setNextHour(this.state.data[key].date)})
     }
+  }
+
+  cancelLimitHour = (key) => {
+    let newData = this.state.data;
+    newData.map((obj, index)=>{
+      if(index === key){
+        obj.hours = Number.parseFloat(Number.parseFloat(this.state.hoursPerWeek) / 5).toFixed(1);
+      }
+      return ''
+    })
+    this.setState({data: newData})
   }
 
   setDefinition= (e, key) => {
@@ -190,7 +286,7 @@ class App extends Component {
   }
 
   clearData = () => {
-    this.setState({data: defaultData})
+    this.setState(() => ({data: []}), () => {this.setNextHour(new Date().toISOString().substring(0, 10))})
   }
 
   triggerModal = (e) => {
@@ -234,7 +330,7 @@ class App extends Component {
                       </tbody>
                     </table>
                   </form>
-                  <div class="container d-flex justify-content-center p-2">
+                  <div className="container d-flex justify-content-center p-2">
                       <button className="btn btn-info mr-2" onClick={this.addRows} >Add</button>
                       <input type="number" min="1" max="10" className="text-center" value={this.state.insertValue} onChange={(e) => {this.setState({insertValue: parseInt(e.target.value, 10)})}} />
                   </div>
@@ -242,7 +338,7 @@ class App extends Component {
                     {this.state.error ? <p className="text-center text-danger font-weight-bold">{this.state.error}</p> : ''}
                   </div>
                 </div>
-                <Warning modal={this.state.warningModal} toggle={this.toggle} message={this.state.modalMessage} proceed={this.state.editing ? () => {} : () => {this.toggleMainModal(); this.clearData()}} ok={this.state.modalYesButtonText} decline={this.state.modalNoButtonText}/>
+                <Warning modal={this.state.warningModal} toggle={this.toggle} message={this.state.modalMessage} proceed={this.state.editing ? () => {} : () => {this.toggleMainModal(); this.clearData()}} declineCallback={this.state.editing ? () => this.cancelLimitHour(this.state.overLimitObjectIndex) : () => {} } ok={this.state.modalYesButtonText} decline={this.state.modalNoButtonText}/>
           </ModalBody>
           <ModalFooter>
             <button type="button" className="btn btn-secondary" onClick={this.cancelData} >Cancel</button>
