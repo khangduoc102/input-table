@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import {Button, Modal, ModalHeader, ModalBody, ModalFooter} from 'reactstrap';
 import Warning from './Warning';
+import Edit from './Edit';
 import './App.css';
 
 let projects = [
@@ -31,13 +32,14 @@ class App extends Component {
     insertValue: 1,
     warningModal: false,
     mainModal: false,
+    editModal: false,
     modalMessage: '',
     modalYesButtonText: 'Yes',
     modalNoButtonText: 'No',
     editing: false,
     error: undefined,
     newValue:{},
-    workHours: undefined,
+    workHours: [],
     hoursPerWeek: undefined,
     nextDate: new Date().toISOString().substring(0, 10),
     nextHour: undefined,
@@ -56,6 +58,12 @@ class App extends Component {
     });
   }
 
+  toggleEditModal = () => {
+    this.setState({
+      editModal: !this.state.editModal
+    });
+  }
+
   componentDidMount = () => {
     this.setState(() => ({ rawData: JSON.parse(sessionStorage.getItem('data')), workHours: JSON.parse(sessionStorage.getItem('work_hours')), hoursPerWeek: sessionStorage.getItem('hours_per_week')}), () => {this.setNextHour(new Date().toISOString().substring(0, 10));})
     JSON.parse(sessionStorage.getItem('data')).map((prj) => {
@@ -65,20 +73,10 @@ class App extends Component {
 
   componentDidUpdate = (prevProps, prevState) => {
     if(prevState.data.length !== this.state.data.length){
-      /*
-      insertValue=this.state.insertValue
-      for(let i=0; i< insertValue; i++){
-        this.setState(() => ({...this.state, ['date' + (this.state.amount+i)]: defaultValues.date, ['project' + (this.state.amount+i)]: defaultValues.project, ['hours' + (this.state.amount+i)]: defaultValues.hours, ['description' + (this.state.amount+i)]: defaultValues.description}))
-      } 
-      console.log(this.state)
-      */
      this.setNextHour(this.state.nextDate);
     }
     if(this.state.nextHour !== prevState.nextHour && this.state.data.length === 0){
       this.setState(() => ({data: [new defaultValues(this.state.nextDate, this.state.workHours[this.state.workHours.length -1].Project, this.state.nextHour, "")]}), () => {this.setNextHour(this.state.nextDate)})
-    }
-    if(this.state.data !== prevState.data){
-      
     }
   }
 
@@ -241,25 +239,13 @@ class App extends Component {
 		this.state.data.map((element, index) => {   
       if(element.hours){
         query = `project=${element.project}&hours=${element.hours.replace(',','.').replace(' ','')}&date=${element.date}&definition=${element.definition}`;
-      /*
-      xmlhttp=new XMLHttpRequest(); 
-      xmlhttp.onreadystatechange=function(){
-        if(xmlhttp.status === 200){
-          res.push('OK');
-          
-        }
-      }
-      xmlhttp.open("GET","/php/logTime.php?" + query,true);
-      xmlhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-      xmlhttp.send();
-      */
-     console.log(query)
-      fetch('php/logTime.php?'+query, {
-        method: "GET",
-        credentials: "same-origin", // include, *same-origin, omit
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-        },
+        console.log(query)
+        fetch('php/logTime.php?'+query, {
+          method: "GET",
+          credentials: "same-origin", // include, *same-origin, omit
+          headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+          },
       }).then(res => {
         resArr.push('ok');    
         if(!this.state.data[index+1]){  
@@ -298,10 +284,13 @@ class App extends Component {
     e.preventDefault();
     this.setState({data: this.state.data.filter((obj, index) => index!==key)})
   }
+
   render() {
     return (
       <div className="App">
         <button type="button" className="btn btn-primary" onClick={this.toggleMainModal}>New</button>
+        <button type="button" className="btn btn-primary" onClick={this.toggleEditModal}>Edit</button>
+
         <Modal isOpen={this.state.mainModal} toggle={this.toggleMainModal} className="modal-lg main-modal ">
           <ModalHeader toggle={this.toggleMainModal} charCode="" >Insert entries</ModalHeader>
           <ModalBody>
@@ -345,6 +334,18 @@ class App extends Component {
               <button type="button" className="btn btn-primary" onClick={this.saveData}>Save changes</button>
           </ModalFooter>
         </Modal>
+
+        { /* Edit modal */ }
+        
+            <Edit 
+              editModal={this.state.editModal}
+              toggleEditModal={this.toggleEditModal}
+              workHours={this.state.workHours}
+              projects={projects}
+              setNextHour={this.setNextHour}
+              hoursPerWeek={this.state.hoursPerWeek}
+            />
+          
       </div>
     );
   }
