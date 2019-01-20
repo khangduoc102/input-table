@@ -48,6 +48,7 @@ input, select {
   height: 2.5rem;
   border: 1px solid #ddd;
   border-radius: 0.25rem;
+  min-width: 4rem;
 }
 
 form{

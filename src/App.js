@@ -67,7 +67,12 @@ class App extends Component {
   componentDidMount = () => {
     this.setState(() => ({ rawData: JSON.parse(sessionStorage.getItem('data')), workHours: JSON.parse(sessionStorage.getItem('work_hours')), hoursPerWeek: sessionStorage.getItem('hours_per_week')}), () => {this.setNextHour(new Date().toISOString().substring(0, 10));})
     JSON.parse(sessionStorage.getItem('data')).map((prj) => {
-      projects.push(prj.Project_ID)
+      if(prj){
+        projects.push(prj.Project_ID);
+      }
+      else {
+        projects.push('');
+      }
     })
   }
 
@@ -76,7 +81,17 @@ class App extends Component {
      this.setNextHour(this.state.nextDate);
     }
     if(this.state.nextHour !== prevState.nextHour && this.state.data.length === 0){
-      this.setState(() => ({data: [new defaultValues(this.state.nextDate, this.state.workHours[this.state.workHours.length -1].Project, this.state.nextHour, "")]}), () => {this.setNextHour(this.state.nextDate)})
+      if(this.state.workHours.length > 0){
+        this.setState(() => ({data: [new defaultValues(this.state.nextDate, this.state.workHours[this.state.workHours.length -1].Project, this.state.nextHour, "")]}), () => {this.setNextHour(this.state.nextDate)})
+      }
+      else{
+        if(projects[0]){
+          this.setState(() => ({data: [new defaultValues(this.state.nextDate, projects[0], this.state.nextHour, "")]}), () => {this.setNextHour(this.state.nextDate)})
+        }
+        else{
+          this.setState(() => ({data: [new defaultValues(this.state.nextDate, " ", this.state.nextHour, "")]}), () => {this.setNextHour(this.state.nextDate)})
+        }
+      }
     }
   }
 
@@ -254,7 +269,7 @@ class App extends Component {
           window.setInterval(() =>{
             this.setState({data: defaultData})
             this.toggleMainModal();         
-            window.location.reload();
+            //window.location.reload();
           }, 1500)   
         }       
       }).catch(e => {
